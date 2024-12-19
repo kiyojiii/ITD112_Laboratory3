@@ -36,6 +36,9 @@ ChartJS.register(
 const Insights = () => {
   const [data, setData] = useState([]);
   const [activeTab, setActiveTab] = useState("trends");
+  const [selectedMonths, setSelectedMonths] = useState([]);
+  const [selectedDataFilter, setSelectedDataFilter] = useState("both"); // New state for filter
+  const [selectedLocations, setSelectedLocations] = useState([]); // New state for location filter
 
   useEffect(() => {
     const fetchData = async () => {
@@ -47,22 +50,33 @@ const Insights = () => {
     fetchData();
   }, []);
 
-  // eslint-disable-next-line no-unused-vars
-  const [selectedMonths, setSelectedMonths] = useState([]);
+  // List of months for the dropdown
+  const months = [
+    { value: "01", label: "January" },
+    { value: "02", label: "February" },
+    { value: "03", label: "March" },
+    { value: "04", label: "April" },
+    { value: "05", label: "May" },
+    { value: "06", label: "June" },
+    { value: "07", label: "July" },
+    { value: "08", label: "August" },
+    { value: "09", label: "September" },
+    { value: "10", label: "October" },
+    { value: "11", label: "November" },
+    { value: "12", label: "December" },
+  ];
 
-  // Chart data setups
-  // 1. Density Plot: Cases over Time (Date formatted as MM/DD/YY)
+  // Filtered Density Plot Data
   const densityPlotData = (() => {
     const dateMap = {};
-  
-    // Aggregate cases and deaths by formatted date
+
     data.forEach((item) => {
       if (item.date) {
         const parts = item.date.split("/"); // Format: MM/DD/YYYY
         if (parts.length === 3) {
           const [month, day, year] = parts;
           const formattedDate = `${month.padStart(2, "0")}/${day.padStart(2, "0")}/${year.slice(-2)}`;
-  
+
           if (
             selectedMonths.length === 0 || // Show all months if no filter applied
             selectedMonths.includes(month.padStart(2, "0"))
@@ -76,36 +90,55 @@ const Insights = () => {
         }
       }
     });
-  
-    // Sort dates in descending order (latest date first)
-    const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(b) - new Date(a));
-  
-    return {
-      labels: sortedDates,
-      datasets: [
-        {
-          label: "Cases",
-          data: sortedDates.map((date) => dateMap[date].cases),
-          borderColor: "#00A0A0",
-          backgroundColor: "rgba(0, 160, 160, 0.2)",
-          tension: 0.4,
-          pointRadius: 4,
-          fill: true,
-        },
-        {
-          label: "Deaths",
-          data: sortedDates.map((date) => dateMap[date].deaths),
-          borderColor: "#FF4500",
-          backgroundColor: "rgba(255, 69, 0, 0.2)",
-          tension: 0.4,
-          pointRadius: 4,
-          fill: true,
-        },
-      ],
-    };
-  })();
-  
 
+    const sortedDates = Object.keys(dateMap).sort((a, b) => new Date(b) - new Date(a));
+
+    // Dynamically construct datasets based on the selected filter
+    const datasets = [];
+    if (selectedDataFilter === "cases" || selectedDataFilter === "both") {
+      datasets.push({
+        label: "Cases",
+        data: sortedDates.map((date) => dateMap[date].cases),
+        borderColor: "#00A0A0",
+        backgroundColor: "rgba(0, 160, 160, 0.2)",
+        tension: 0.4,
+        pointRadius: 4,
+        fill: true,
+      });
+    }
+    if (selectedDataFilter === "deaths" || selectedDataFilter === "both") {
+      datasets.push({
+        label: "Deaths",
+        data: sortedDates.map((date) => dateMap[date].deaths),
+        borderColor: "#FF4500",
+        backgroundColor: "rgba(255, 69, 0, 0.2)",
+        tension: 0.4,
+        pointRadius: 4,
+        fill: true,
+      });
+    }
+
+    return { labels: sortedDates, datasets };
+  })();
+
+  // Month Filter Change Handler
+  const handleMonthChange = (event) => {
+    const selectedOptions = Array.from(event.target.selectedOptions).map((option) => option.value);
+    setSelectedMonths(selectedOptions);
+  };
+
+  // Reset Filters
+  const resetFilters = () => {
+    setSelectedMonths([]);
+    setSelectedDataFilter("both");
+  };
+
+  // Data Filter Change Handler
+  const handleDataFilterChange = (event) => {
+    setSelectedDataFilter(event.target.value);
+  };
+
+    
   // 2. Choropleth Map
   const regionNameMapping = useMemo(
     () => ({
@@ -225,6 +258,33 @@ const Insights = () => {
   };  
   
   // 3. Comparisons: Stacked Bar Chart (Location: Cases and Deaths)
+  const comparisonBarOptions = {
+    plugins: {
+      legend: {
+        position: "top",
+      },
+      tooltip: {
+        mode: "index",
+        intersect: false,
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: {
+        stacked: true, // Ensure x-axis is stacked
+      },
+      y: {
+        stacked: true, // Ensure y-axis is stacked
+        title: {
+          display: true,
+          text: "Number of Cases/Deaths",
+        },
+      },
+    },
+  };
+
+   // Filter the Bar Chart Data Based on Selected Locations
   const comparisonBarData = (() => {
     const locationDataMap = {};
 
@@ -239,13 +299,10 @@ const Insights = () => {
       }
     });
 
-    const locations = Object.keys(locationDataMap);
-
-    // Fixed colors for stacked datasets
-    const colorMap = {
-      cases: "#00A0A0", // Teal for cases
-      deaths: "#FF4500", // Red for deaths
-    };
+    // Filter locations based on selectedLocations
+    const locations = Object.keys(locationDataMap).filter(
+      (loc) => selectedLocations.length === 0 || selectedLocations.includes(loc)
+    );
 
     return {
       labels: locations, // X-axis: Locations
@@ -253,17 +310,28 @@ const Insights = () => {
         {
           label: "Cases",
           data: locations.map((loc) => locationDataMap[loc].cases),
-          backgroundColor: colorMap.cases,
+          backgroundColor: "#00A0A0", // Teal for cases
         },
         {
           label: "Deaths",
           data: locations.map((loc) => locationDataMap[loc].deaths),
-          backgroundColor: colorMap.deaths,
+          backgroundColor: "#FF4500", // Red for deaths
         },
       ],
     };
   })();
 
+  // Multi-Select Change Handler
+  const handleLocationChange = (event) => {
+    const selectedOptions = Array.from(event.target.selectedOptions).map((option) => option.value);
+    setSelectedLocations(selectedOptions);
+  };
+
+  // Reset Filters
+  const resetLocationFilter = () => {
+    setSelectedLocations([]); // Clear the location filter
+  };
+  
   // 4. Proportions: Doughnut Chart (Cases by Region)
   const regionCasesData = (() => {
     const regionMap = {};
@@ -411,11 +479,43 @@ const Insights = () => {
       </div>
       <div className="content">
       {activeTab === "trends" && (
-        <div className="chart-card">
-          <h3>Density Plot: Cases & Deaths Over Time</h3>
-          <Line data={densityPlotData} options={{ maintainAspectRatio: false }} />
-        </div>
-      )}
+          <>
+            <div className="filter-container">
+              <label htmlFor="month-filter">Filter by Month:</label>
+              <select
+                id="month-filter"
+                multiple
+                value={selectedMonths}
+                onChange={handleMonthChange}
+                className="month-filter"
+              >
+                {months.map((month) => (
+                  <option key={month.value} value={month.value}>
+                    {month.label}
+                  </option>
+                ))}
+              </select>
+              <label htmlFor="data-filter" style={{ marginLeft: "20px" }}>Show:</label>
+              <select
+                id="data-filter"
+                value={selectedDataFilter}
+                onChange={handleDataFilterChange}
+                className="data-filter"
+              >
+                <option value="both">Cases & Deaths</option>
+                <option value="cases">Cases Only</option>
+                <option value="deaths">Deaths Only</option>
+              </select>
+              <button onClick={resetFilters} className="reset-button">
+                Reset
+              </button>
+            </div>
+            <div className="chart-card">
+              <h3>Density Plot: Cases & Deaths Over Time</h3>
+              <Line data={densityPlotData} options={{ maintainAspectRatio: false }} />
+            </div>
+          </>
+        )}
       {activeTab === "maps" && (
         <div className="chart-card">
           <h3>Choropleth Map: Dengue Cases and Deaths</h3>
@@ -423,12 +523,33 @@ const Insights = () => {
         </div>
       )}
       {activeTab === "comparisons" && (
-        <div className="chart-card">
-          <h3>Stacked Bar Chart: Cases and Deaths by Location</h3>
-          <Bar data={comparisonBarData} options={{ maintainAspectRatio: false }} />
-        </div>
-      )}
-
+          <>
+            <div className="filter-container">
+              <label htmlFor="location-filter">Filter by Location:</label>
+              <select
+                id="location-filter"
+                multiple
+                value={selectedLocations}
+                onChange={handleLocationChange}
+                className="location-filter"
+              >
+                {/* Populate dropdown with unique locations */}
+                {[...new Set(data.map((item) => item.loc))].map((location) => (
+                  <option key={location} value={location}>
+                    {location}
+                  </option>
+                ))}
+              </select>
+              <button onClick={resetLocationFilter} className="reset-button">
+                Reset
+              </button>
+            </div>
+            <div className="chart-card">
+              <h3>Stacked Bar Chart: Cases and Deaths by Location</h3>
+              <Bar data={comparisonBarData} options={comparisonBarOptions} />
+            </div>
+          </>
+        )}
       {activeTab === "proportions" && (
         <div className="chart-card">
           <h3>Doughnut Chart: Cases by Region</h3>

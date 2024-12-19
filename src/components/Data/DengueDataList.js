@@ -24,11 +24,10 @@ const DengueDataList = () => {
   const [rowsPerPage] = useState(8);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [deleteId, setDeleteId] = useState(null);
+  const [setDeleteId] = useState(null);
   const [selectedLocations, setSelectedLocations] = useState([]);
   const [startDate, setStartDate] = useState(""); // Start date
   const [endDate, setEndDate] = useState("");     // End date
-
 
   useEffect(() => {
     fetchData();
