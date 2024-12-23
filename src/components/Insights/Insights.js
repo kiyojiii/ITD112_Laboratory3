@@ -524,30 +524,31 @@ const Insights = () => {
       )}
       {activeTab === "comparisons" && (
           <>
-            <div className="filter-container">
-              <label htmlFor="location-filter">Filter by Location:</label>
-              <select
-                id="location-filter"
-                multiple
-                value={selectedLocations}
-                onChange={handleLocationChange}
-                className="location-filter"
-              >
-                {/* Populate dropdown with unique locations */}
-                {[...new Set(data.map((item) => item.loc))].map((location) => (
-                  <option key={location} value={location}>
-                    {location}
-                  </option>
-                ))}
-              </select>
-              <button onClick={resetLocationFilter} className="reset-button">
-                Reset
-              </button>
-            </div>
-            <div className="chart-card">
-              <h3>Stacked Bar Chart: Cases and Deaths by Location</h3>
-              <Bar data={comparisonBarData} options={comparisonBarOptions} />
-            </div>
+          <div className="filter-container">
+            <label htmlFor="location-filter">Filter by Location:</label>
+            <select
+              id="location-filter"
+              multiple
+              value={selectedLocations}
+              onChange={handleLocationChange}
+              className="location-filter"
+            >
+              {/* Populate dropdown with unique locations */}
+              {[...new Set(data.map((item) => item.loc))].map((location) => (
+                <option key={location} value={location}>
+                  {location}
+                </option>
+              ))}
+            </select>
+            <button onClick={resetLocationFilter} className="reset-button">
+              Reset
+            </button>
+          </div>
+
+          <div className="chart-card">
+            <h3>Stacked Bar Chart: Cases and Deaths by Location</h3>
+            <Bar data={comparisonBarData} options={comparisonBarOptions} />
+          </div>
           </>
         )}
       {activeTab === "proportions" && (
